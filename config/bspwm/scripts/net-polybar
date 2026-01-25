@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Author: g3k
+
+get_ip() {
+  ip -4 addr show "$1" 2>/dev/null | awk '/inet /{print $2}' | cut -d/ -f1
+}
+
+# VPN
+iface=$(ip -o link show | awk -F': ' '/tun0|wg0/{print $2; exit}')
+if [[ -n "$iface" ]]; then
+  ipaddr=$(get_ip "$iface")
+  [[ -n "$ipaddr" ]] && echo "󰖂 $ipaddr" || echo "󰖂 VPN"
+  exit 0
+fi
+
+# Ethernet
+iface=$(ip -o link show | awk -F': ' '/enp|eth/{print $2; exit}')
+if [[ -n "$iface" ]]; then
+  ipaddr=$(get_ip "$iface")
+  [[ -n "$ipaddr" ]] && echo "󰈀 $ipaddr" || echo "󰈀 ETH"
+  exit 0
+fi
+
+# WiFi
+iface=$(ip -o link show | awk -F': ' '/wlp|wlan/{print $2; exit}')
+if [[ -n "$iface" ]]; then
+  ipaddr=$(get_ip "$iface")
+  [[ -n "$ipaddr" ]] && echo " $ipaddr" || echo " WIFI"
+  exit 0
+fi
+
+echo "󰖪 Offline"
+

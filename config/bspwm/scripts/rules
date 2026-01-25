@@ -1,0 +1,32 @@
+#!/bin/sh
+# Author: g3k
+
+wid="$1"
+class="$2"
+instance="$3"
+consequences="$4"
+
+result() {
+    eval "$consequences"
+    [ -n "$state" ] || echo "$1"
+}
+
+case "$class" in
+    *FloatingTerm*)
+        result "state=floating center=true"
+        ;;
+
+    *fire*|Navigator)
+        result "desktop=^3 follow=on"
+        ;;
+
+    *Caido*)
+        result "desktop=^4 follow=on"
+        ;;
+
+
+    *obsi*)
+        result "desktop=^6 follow=on"
+        ;;
+esac
+

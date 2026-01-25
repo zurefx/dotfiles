@@ -1,0 +1,147 @@
+#!/bin/bash
+# Author: g3k
+
+MUSIC_DIR="$HOME/.config/music"
+PLAYER="mpv"
+CYAN="\e[36m"
+RESET="\e[0m"
+BOLD="\e[1m"
+NOTIFY_ID=6666
+SHUFFLE_FILE="/tmp/music_shuffle.txt"
+
+# ───────────────────────────────────────────────
+# Animación
+# ───────────────────────────────────────────────
+loading() {
+  local msg="$1"
+  echo -ne "${CYAN}${msg}${RESET}"
+  for c in '.' '..' '...'; do
+    echo -ne "\r${CYAN}${msg}${c}${RESET}"
+    sleep 0.3
+  done
+  echo -e "\r${CYAN}${msg}... listo!${RESET}"
+}
+
+# ───────────────────────────────────────────────
+# Notificación (sin imagen)
+# ───────────────────────────────────────────────
+notify_cyan() {
+  local title="$1"
+  local message="$2"
+  dunstify -r "$NOTIFY_ID" -u normal -t 3000 -h string:x-dunst-stack-tag:music "$title" "$message"
+}
+
+# ───────────────────────────────────────────────
+# Validar carpeta y archivos
+# ───────────────────────────────────────────────
+validate_music_dir() {
+  if [ ! -d "$MUSIC_DIR" ]; then
+    echo -e "${CYAN}⚠ Carpeta no encontrada:${RESET} $MUSIC_DIR"
+    notify_cyan "Music Player" "⚠ Carpeta no encontrada en $MUSIC_DIR"
+    exit 1
+  fi
+
+  local mp3_count
+  mp3_count=$(find "$MUSIC_DIR" -maxdepth 1 -type f -iname "*.mp3" | wc -l)
+  if [ "$mp3_count" -eq 0 ]; then
+    echo -e "${CYAN}⚠ No hay archivos MP3 en:${RESET} $MUSIC_DIR"
+    notify_cyan "Music Player" "⚠ No se encontraron archivos MP3"
+    exit 1
+  fi
+}
+
+# ───────────────────────────────────────────────
+# Verificar si mpv está activo (solo nuestra música)
+# ───────────────────────────────────────────────
+is_playing() {
+  pgrep -f "mpv.*$MUSIC_DIR" >/dev/null
+}
+
+# ───────────────────────────────────────────────
+# Generar lista aleatoria sin repetición
+# ───────────────────────────────────────────────
+generate_shuffle() {
+  find "$MUSIC_DIR" -maxdepth 1 -type f -iname "*.mp3" | sort -R > "$SHUFFLE_FILE"
+}
+
+# ───────────────────────────────────────────────
+# Reproducción secuencial aleatoria
+# ───────────────────────────────────────────────
+play_random_no_repeat() {
+  echo -e "${CYAN}🎵 Generando lista aleatoria sin repetición...${RESET}"
+  generate_shuffle
+
+  while [ -f "$SHUFFLE_FILE" ]; do
+    local total=$(wc -l < "$SHUFFLE_FILE")
+    local count=0
+    while IFS= read -r track; do
+      [ ! -f "$SHUFFLE_FILE" ] && break 2  # si se borra el archivo, sal del bucle principal
+      [ -z "$track" ] && continue
+      count=$((count + 1))
+      local base=$(basename "$track")
+      echo -e "${CYAN}♪ [$count/$total] Reproduciendo:${RESET} $base"
+      notify_cyan "🎶 Reproduciendo ($count/$total)" "$base"
+      "$PLAYER" --really-quiet --no-video --loop-file=no "$track"
+    done < "$SHUFFLE_FILE"
+
+    echo -e "${CYAN}🔁 Lista completada — remezclando...${RESET}"
+    generate_shuffle
+  done
+}
+
+# ───────────────────────────────────────────────
+# Detener mpv correctamente (solo música del playlist)
+# ───────────────────────────────────────────────
+stop_music() {
+  echo -e "${CYAN}🎶 Deteniendo música...${RESET}"
+
+  # Eliminar archivo de control para romper el bucle
+  rm -f "$SHUFFLE_FILE"
+
+  # Matar procesos mpv que estén reproduciendo desde la carpeta de música
+  pkill -f "mpv.*$MUSIC_DIR"
+
+  sleep 1
+
+  # Verificar si aún queda algo activo
+  if ! is_playing; then
+    echo -e "${CYAN}✅ Música detenida correctamente.${RESET}"
+    notify_cyan "Music Player" "Música detenida correctamente 🎵"
+  else
+    echo -e "${CYAN}✖ No se pudo detener toda la música.${RESET}"
+    notify_cyan "Music Player" "No se pudo detener completamente ⚠"
+  fi
+}
+
+# ───────────────────────────────────────────────
+# MAIN
+# ───────────────────────────────────────────────
+clear
+echo -e "${CYAN}╔══════════════════════════════════════════════╗${RESET}"
+echo -e "${CYAN}║        MUSIC PLAYLIST MANAGER 🎵             ║${RESET}"
+echo -e "${CYAN}╚══════════════════════════════════════════════╝${RESET}"
+echo
+
+validate_music_dir
+
+if is_playing; then
+  echo -e "${CYAN}🎶 Reproducción activa — deteniendo...${RESET}"
+  loading "Deteniendo música"
+  stop_music
+else
+  echo -e "${CYAN}🎧 Iniciando playlist aleatoria sin repetición...${RESET}"
+  loading "Cargando MPV"
+  
+  (
+    play_random_no_repeat
+  ) >/dev/null 2>&1 &
+
+  sleep 1
+  if is_playing; then
+    echo -e "${CYAN}✅ Playlist iniciada correctamente.${RESET}"
+    notify_cyan "Music Player" "Playlist aleatoria en reproducción 🎶"
+  else
+    echo -e "${CYAN}✖ Error al iniciar playlist.${RESET}"
+    notify_cyan "Music Player" "No se pudo iniciar la playlist ⚠"
+  fi
+fi
