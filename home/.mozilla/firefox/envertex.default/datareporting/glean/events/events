@@ -1,0 +1,11 @@
+{"timestamp":1364085,"category":"session_restore","name":"backup_can_be_loaded_session_file","extra":{"loadfail_reason":"N/A","path_key":"clean","can_load":"true","glean_timestamp":"1769273708594"}}
+{"timestamp":1364088,"category":"session_restore","name":"backup_can_be_loaded_session_file","extra":{"loadfail_reason":"N/A","glean_timestamp":"1769273708597","can_load":"true","path_key":"clean"}}
+{"timestamp":1364090,"category":"session_restore","name":"shutdown_success_session_startup","extra":{"glean_timestamp":"1769273708599","shutdown_reason":"N/A","shutdown_ok":"false"}}
+{"timestamp":1365085,"category":"webcompatreporting","name":"reason_dropdown","extra":{"glean_timestamp":"1769273709594","setting":"required"}}
+{"timestamp":1365367,"category":"nimbus_events","name":"startup_database_consistency","extra":{"store_active_count":"1","total_db_count":"1","db_active_count":"1","glean_timestamp":"1769273709876","total_store_count":"1"}}
+{"timestamp":1365897,"category":"doh","name":"state_rollback","extra":{"value":"null","glean_timestamp":"1769273710406"}}
+{"timestamp":1366651,"category":"nimbus_events","name":"is_ready","extra":{"glean_timestamp":"1769273711161"}}
+{"timestamp":1366877,"category":"urlbar","name":"abandonment","extra":{"interaction":"typed","results":"top_site,top_site,top_site,top_site,top_site,top_site,top_site,trending_search,trending_search,trending_search","sap":"urlbar_newtab","search_mode":"","n_chars":"0","actions":"none,none,none,none,none,none,none,none,none,none","groups":"top_site,top_site,top_site,top_site,top_site,top_site,top_site,trending_search,trending_search,trending_search","abandonment_type":"blur","n_results":"10","n_words":"0","search_engine_default_id":"google-b-e","glean_timestamp":"1769273711387"}}
+{"timestamp":1367078,"category":"jsonfile","name":"load_logins","extra":{"value":"","glean_timestamp":"1769273711587"}}
+{"timestamp":1367079,"category":"upgrade_dialog","name":"trigger_reason","extra":{"glean_timestamp":"1769273711588","value":"not-major"}}
+{"timestamp":1367471,"category":"extensions.data","name":"sync_usage_quotas","extra":{"backend":"rust","items_over_quota":"0","total_size_bytes":"132","addon_id":"addon@darkreader.org","glean_timestamp":"1769273711980","items_count":"5"}}

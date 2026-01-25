@@ -1,0 +1,47 @@
+/* Barra de bookmarks ocupa todo el ancho */
+#PersonalToolbar {
+  display: flex !important;
+}
+
+/* Contenedor de bookmarks */
+#PlacesToolbarItems {
+  display: flex !important;
+  flex: 1 !important;
+  justify-content: space-between !important; /* distribuye los bookmarks */
+  align-items: center !important; /* centra verticalmente */
+}
+
+/* Cada bookmark centrado */
+#PlacesToolbarItems > * {
+  display: flex !important;
+  justify-content: center !important; /* centra horizontal */
+  align-items: center !important; /* centra vertical */
+  flex: 0 0 auto !important; /* no se estira */
+}
+
+toolbarseparator {
+  width: 1px !important; /* ancho de la línea */
+  height: 20px !important; /* altura ajustada */
+  border-left: 1px dotted rgba(255, 255, 255, 0.8) !important; /* borde punteado */
+  margin: 0 10px !important; /* separación horizontal */
+  display: inline-block !important; /* aseguramos que sea un bloque en línea */
+  position: relative !important; /* posición relativa */
+  top: 2px !important; /* lo alineamos verticalmente si es necesario */
+}/* Barra de pestañas pega al borde superior */
+#TabsToolbar {
+  margin: 0 !important;   /* quitar margen */
+  padding: 0 !important;  /* quitar padding */
+  min-height: 28px !important; /* ajusta según tu preferencia */
+  box-sizing: border-box !important;
+}
+
+/* Quita margen del título de la ventana si existe */
+#titlebar {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#titlebar {
+  display: none !important; /* oculta la barra de título nativa */
+}
+
