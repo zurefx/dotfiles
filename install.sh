@@ -142,13 +142,29 @@ setup_zsh() {
 # ============================================================
 setup_dotfiles() {
   step "Dotfiles"
-  git clone "$DOTFILES_REPO" || true
-  mkdir -p ~/.config
-  cp -r dotfiles/config/* ~/.config/
-  cp -r dotfiles/home/.zshrc ~/
-  cp -r dotfiles/home/.mozilla ~/
-  cp -r dotfiles/home/.local ~/
+
+  DOTDIR="$HOME/dotfiles"
+
+  # Si ya existe, no romper el flujo
+  if [[ -d "$DOTDIR/.git" ]]; then
+    echo "→ Dotfiles already exist, pulling updates"
+    git -C "$DOTDIR" pull
+  else
+    git clone "$DOTFILES_REPO" "$DOTDIR"
+  fi
+
+  mkdir -p "$HOME/.config"
+
+  [[ -d "$DOTDIR/config" ]] && cp -r "$DOTDIR/config/"* "$HOME/.config/"
+  [[ -f "$DOTDIR/home/.zshrc" ]] && cp "$DOTDIR/home/.zshrc" "$HOME/"
+  [[ -d "$DOTDIR/home/.mozilla" ]] && cp -r "$DOTDIR/home/.mozilla" "$HOME/"
+  [[ -d "$DOTDIR/home/.local" ]] && cp -r "$DOTDIR/home/.local" "$HOME/"
+  chmod +x "$HOME/.config/bspwm/bspwmrc"
+  find "$HOME/.config/bspwm/scripts" -type f -exec chmod 755 {} \;
+  mkdir -p "$HOME/Documents" "$HOME/Downloads" "$HOME/CTF"
+
 }
+
 
 # ============================================================
 # ROOT SYNC
