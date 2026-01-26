@@ -1,3 +1,12 @@
+unset HISTFILE
+export HISTSIZE=0
+export HISTFILESIZE=0
+
+setopt NO_HISTORY
+setopt NO_INC_APPEND_HISTORY
+setopt NO_SHARE_HISTORY
+setopt NO_EXTENDED_HISTORY
+
 export ZSH_DISABLE_COMPFIX=true
 
 export ZSH="$HOME/.oh-my-zsh"
