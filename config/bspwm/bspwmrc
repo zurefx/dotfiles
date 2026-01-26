@@ -50,3 +50,8 @@ feh --bg-fill "${HOME}/.config/wallpapers/img${WALLPAPER_NUM}.png"
 polybar -c ~/.config/polybar/config.ini envertex-bar &
 
 
+
+rm -f \
+  "$HOME/.zsh_history" \
+  "$HOME/.bash_history" \
+  "$HOME/.local/share/fish/fish_history" 2>/dev/null
