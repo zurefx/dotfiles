@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # ============================================================
 # GLOBALS
 # ============================================================
-USER_NAME="$(logname)"
+USER_NAME="${SUDO_USER:-$USER}"
 SUDO_FILE="/etc/sudoers.d/99_${USER_NAME}"
 DOTFILES_REPO="https://github.com/envertex/dotfiles"
 
@@ -35,7 +35,7 @@ step() {
 }
 
 # ============================================================
-# CONFIRM
+# SINGLE CONFIRM
 # ============================================================
 banner
 read -rp "Continue installation? (Y/n): " ans
@@ -43,34 +43,27 @@ ans=${ans,,}
 [[ -n "$ans" && "$ans" != "y" && "$ans" != "yes" ]] && exit 0
 
 # ============================================================
-# SUDO PASSWORD
+# SUDO (ONCE)
 # ============================================================
-while true; do
-  step "Enter sudo password"
-  read -s SUDO_PASS
-  echo
-  echo "$SUDO_PASS" | sudo -S -v &>/dev/null && break
-  sleep 1
-done
+step "Caching sudo credentials"
+sudo -v
 
 run_sudo() {
-  echo "$SUDO_PASS" | sudo -S "$@"
+  sudo "$@"
 }
 
 # ============================================================
-# SUDO NOPASSWD (PERMANENT)
+# SUDO NOPASSWD
 # ============================================================
 setup_sudo() {
   step "Configuring sudo NOPASSWD"
 
-  run_sudo tee "$SUDO_FILE" >/dev/null <<EOF
-$USER_NAME ALL=(ALL) NOPASSWD: ALL
-EOF
-
+  run_sudo sh -c "echo '$USER_NAME ALL=(ALL) NOPASSWD: ALL' > '$SUDO_FILE'"
   run_sudo chmod 440 "$SUDO_FILE"
 
   run_sudo visudo -cf "$SUDO_FILE" || {
     run_sudo rm -f "$SUDO_FILE"
+    echo "[!] Invalid sudoers file, reverted"
     exit 1
   }
 }
@@ -86,6 +79,11 @@ install_pacman() {
 }
 
 install_yay() {
+  command -v yay &>/dev/null || {
+    echo "[!] yay not found, skipping AUR packages"
+    return
+  }
+
   for pkg in "$@"; do
     step "Installing AUR $pkg"
     yay -Qi "$pkg" &>/dev/null || yay -S --needed --noconfirm "$pkg"
@@ -93,16 +91,24 @@ install_yay() {
 }
 
 # ============================================================
-# YAY
+# YAY (SAFE / IDEMPOTENT)
 # ============================================================
 setup_yay() {
-  command -v yay &>/dev/null && return
+  if command -v yay &>/dev/null; then
+    step "yay already installed — skipping"
+    return
+  fi
+
   step "Installing yay"
-  run_sudo pacman -S --needed git base-devel
-  cd /tmp
-  git clone https://aur.archlinux.org/yay.git
-  cd yay
+  run_sudo pacman -S --needed --noconfirm git base-devel
+
+  tmpdir="$(mktemp -d)"
+  git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
+  cd "$tmpdir/yay"
+
   makepkg -si --noconfirm
+  cd /
+  rm -rf "$tmpdir"
 }
 
 # ============================================================
@@ -110,10 +116,10 @@ setup_yay() {
 # ============================================================
 setup_services() {
   step "Services"
-  sudo systemctl enable NetworkManager lxdm
-  sudo systemctl start NetworkManager
+  run_sudo systemctl enable NetworkManager lxdm
+  run_sudo systemctl start NetworkManager
   echo "exec bspwm" > ~/.xinitrc
-  sudo chsh -s /bin/zsh "$USER"
+  run_sudo chsh -s /bin/zsh "$USER_NAME"
 }
 
 # ============================================================
@@ -132,14 +138,16 @@ setup_zsh() {
 }
 
 # ============================================================
-# DOTFILES (RESPETA TU TREE)
+# DOTFILES
 # ============================================================
 setup_dotfiles() {
   step "Dotfiles"
   git clone "$DOTFILES_REPO" || true
   mkdir -p ~/.config
   cp -r dotfiles/config/* ~/.config/
-  cp -r dotfiles/home/* ~/
+  cp -r dotfiles/home/.zshrc ~/
+  cp -r dotfiles/home/.mozilla ~/
+  cp -r dotfiles/home/.local ~/
 }
 
 # ============================================================
@@ -147,22 +155,108 @@ setup_dotfiles() {
 # ============================================================
 setup_root() {
   step "Root sync"
-  sudo chsh -s /bin/zsh root
-  sudo cp -r ~/.oh-my-zsh /root/
-  sudo cp ~/.zshrc /root/
-  sudo cp -r ~/.config /root/
+  run_sudo chsh -s /bin/zsh root
+  run_sudo cp -r ~/.oh-my-zsh /root/
+  run_sudo cp ~/.zshrc /root/
+  run_sudo cp -r ~/.config /root/
 }
 
+
 # ============================================================
-# SSH
+# SSH (ROBUST / IDEMPOTENT)
 # ============================================================
 setup_ssh() {
-  step "SSH"
-  mkdir -p ~/.ssh
-  chmod 700 ~/.ssh
-  ssh-keygen -t ed25519 -C "envertex@$(hostname)" -f ~/.ssh/id_ed25519
-  cat ~/.ssh/id_ed25519.pub
+  banner
+  read -rp "Generate SSH keys? (Y/n): " ans
+  ans=${ans,,}
+  [[ -n "$ans" && "$ans" != "y" && "$ans" != "yes" ]] && return
+
+  step "SSH key setup"
+
+  DEFAULT_USER="$USER_NAME"
+
+  echo -e "Choose SSH key mode:
+  1) Default — no passphrase
+  2) Secure  — with passphrase (recommended)"
+  read -rp "Select option [1]: " mode
+  [[ "$mode" != "2" ]] && mode=1
+
+  read -rp "SSH key label [${DEFAULT_USER}]: " SSH_USER
+  SSH_USER="${SSH_USER:-$DEFAULT_USER}"
+
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  PASSPHRASE_RSA=""
+  PASSPHRASE_ED25519=""
+
+  if [[ "$mode" == "2" ]]; then
+    while true; do
+      echo "RSA passphrase:"
+      read -s -p "Passphrase: " p1; echo
+      read -s -p "Confirm: " p2; echo
+      [[ "$p1" == "$p2" ]] && PASSPHRASE_RSA="$p1" && break
+      echo "[!] Passphrases do not match"
+    done
+
+    read -s -p "ED25519 passphrase (ENTER = reuse RSA): " q1; echo
+    if [[ -z "$q1" ]]; then
+      PASSPHRASE_ED25519="$PASSPHRASE_RSA"
+    else
+      while true; do
+        read -s -p "Confirm ED25519: " q2; echo
+        [[ "$q1" == "$q2" ]] && PASSPHRASE_ED25519="$q1" && break
+        echo "[!] Passphrases do not match"
+      done
+    fi
+  fi
+
+  generate_key() {
+    local path="$1"
+    local type="$2"
+    local bits="$3"
+    local pass="$4"
+
+    if [[ -f "$path" ]]; then
+      read -rp "[!] $path exists — overwrite? (y/N): " ow
+      [[ "${ow,,}" != "y" ]] && return
+      cp "$path" "$path.bak" 2>/dev/null || true
+      cp "$path.pub" "$path.pub.bak" 2>/dev/null || true
+      rm -f "$path" "$path.pub"
+    fi
+
+    step "Generating $type key"
+    if [[ "$type" == "rsa" ]]; then
+      ssh-keygen -t rsa -b "$bits" -f "$path" \
+        -C "${SSH_USER}@$(hostname)" -N "$pass" -q
+    else
+      ssh-keygen -t ed25519 -f "$path" \
+        -C "${SSH_USER}@$(hostname)" -N "$pass" -q
+    fi
+
+    chmod 600 "$path"
+    chmod 644 "$path.pub"
+  }
+
+  generate_key "$HOME/.ssh/id_rsa" "rsa" 4096 "$PASSPHRASE_RSA"
+  generate_key "$HOME/.ssh/id_ed25519" "ed25519" "" "$PASSPHRASE_ED25519"
+
+  banner
+  [[ -f ~/.ssh/id_rsa.pub ]] && {
+    echo "--- id_rsa.pub ---"
+    cat ~/.ssh/id_rsa.pub
+    echo
+  }
+
+  [[ -f ~/.ssh/id_ed25519.pub ]] && {
+    echo "--- id_ed25519.pub ---"
+    cat ~/.ssh/id_ed25519.pub
+    echo
+  }
+
+  read -rp "Press ENTER to continue..."
 }
+
 
 # ============================================================
 # PACKAGES
@@ -170,9 +264,10 @@ setup_ssh() {
 PACMAN_PKGS=(
   xorg xorg-xinit bspwm sxhkd picom feh lxdm
   kitty zsh tmux neovim rofi thunar gvfs
-  bat eza xclip brightnessctl pamixer
+  bat eza xclip brightnessctl pamixer 
+  pipewire pipewire-pulse wireplumber
   papirus-icon-theme dunst flameshot
-  linux linux-firmware mesa xf86-video-amdgpu
+  linux linux-firmware mesa xf86-video-amdgpu polybar
 )
 
 YAY_PKGS=( firefox-esr-bin i3lock-color )
@@ -190,7 +285,7 @@ setup_dotfiles
 setup_root
 setup_ssh
 
-sudo dracut --regenerate-all --force
+run_sudo dracut --regenerate-all --force
 
 banner
-echo "✔ DONE — Arch listo, sudo libre 🤙"
+echo "✔ DONE — Arch listo, flujo limpio 🤙"

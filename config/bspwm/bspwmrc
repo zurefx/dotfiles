@@ -47,6 +47,6 @@ pidof picom >/dev/null || picom --config "$HOME/.config/picom/picom.conf" -b &
 
 WALLPAPER_NUM=$((RANDOM % 3 + 1))
 feh --bg-fill "${HOME}/.config/wallpapers/img${WALLPAPER_NUM}.png"
-polybar -c ~/.config/polybar/config.ini 
+polybar -c ~/.config/polybar/config.ini envertex-bar &
 
 
