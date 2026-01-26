@@ -45,3 +45,4 @@ ZSH_HIGHLIGHT_STYLES[arg]='fg=251,bold'
 
 ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=210,bold'
 
+precmd() { history -c }
