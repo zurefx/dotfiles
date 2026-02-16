@@ -283,7 +283,7 @@ PACMAN_PKGS=(
   bat eza xclip brightnessctl pamixer 
   pipewire pipewire-pulse wireplumber
   papirus-icon-theme dunst flameshot
-  linux linux-firmware mesa xf86-video-amdgpu polybar
+  linux linux-firmware mesa xf86-video-amdgpu polybar nodejs npm
 )
 
 YAY_PKGS=( firefox-esr-bin i3lock-color )
