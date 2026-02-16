@@ -281,8 +281,8 @@ PACMAN_PKGS=(
   xorg xorg-xinit bspwm sxhkd picom feh lxdm
   kitty zsh tmux neovim rofi thunar gvfs
   bat eza xclip brightnessctl pamixer 
-  pipewire pipewire-pulse wireplumber
-  papirus-icon-theme dunst flameshot
+  pipewire pipewire-pulse wireplumber papirus-icon-theme
+  papirus-icon-theme dunst flameshot gnome-themes-extra 
   linux linux-firmware mesa xf86-video-amdgpu polybar nodejs npm
 )
 
